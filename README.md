@@ -72,7 +72,6 @@ bash organize_files.sh
 Do the same for the dosresmeta directory:
 
 ```bash
-cp organize_files.sh dosresmeta
 cd ../dosresmeta
 bash organize_files.sh
 ```
@@ -83,5 +82,5 @@ This workflow has been tested in a Unix-like environment (Linux/macOS). Windows 
 
 
 ## License
-Code license: MIT (see LICENSE.txt)
+Code license: MIT (see LICENSE.txt)  
 Data license: CC0 1.0 (see LICENSE-DATA.txt)
