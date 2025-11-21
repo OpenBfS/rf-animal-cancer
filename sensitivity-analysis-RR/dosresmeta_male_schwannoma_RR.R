@@ -2,7 +2,7 @@ source("config.R") # load working directory from config file
 setwd(workdir)
 
 
-#### Meta-analysis per dose-level to obtain ORs and SEs for use with dosresmeta ####
+#### Meta-analysis per dose-level to obtain RRs and SEs for use with dosresmeta ####
 
 # We are using treatment arm continuity correction (TACC) according to Sweeting 2004 but modify it to accommodate the situation of more than two groups per study and more than one study in the analysis.
 # Specifically, we distribute the constraint of one case per zero-cell study group  among the groups of the zero-cell-affected studies proportionally to the group size. 
@@ -71,7 +71,7 @@ dat$sham_N_all = dat$sham_N_all + 2*sham_add
 
 
 ##### Step 2: Descriptive forest plot for males #####
-# Note: this meta-analysis is not valid since the Sham group is shared between different exposure levels. This is only to obtain / verify ORs and SEs.
+# Note: this meta-analysis is not valid since the Sham group is shared between different exposure levels. This is only to obtain / verify RRs and SEs.
 
 ma <<- metabin(event.e = exposed_N_cases,
                n.e = exposed_N_all,
@@ -79,7 +79,7 @@ ma <<- metabin(event.e = exposed_N_cases,
                n.c = sham_N_all,
                label.e = "RF-EMF",
                label.c = "Sham",
-               text.common = "Odds Ratio with 95% CI",
+               text.common = "Risk Ratio with 95% CI",
                label.left = "Favours Exposure",
                col.label.left = "purple",
                col.label.right = "red",
@@ -91,7 +91,7 @@ ma <<- metabin(event.e = exposed_N_cases,
                
                random = FALSE,                #use random effect model
                common = TRUE,                #no additional fixed effect model
-               sm = "OR",                   #use OR as summary measure 
+               sm = "RR",                   #use RR as summary measure 
                method = "MH",
                incr = 0,
                #method.tau = "DL",            #use DerSimonian-Laird estimator to calculate between-study variance tau
@@ -102,27 +102,27 @@ ma <<- metabin(event.e = exposed_N_cases,
 
 ma
 
-png(paste0(saveto, "/males_schwannoma_alldoses_frTACC.png"), 11,4, units = "in", res = 300)
+png(paste0(saveto, "/males_schwannoma_alldoses_frTACC_RR.png"), 11,4, units = "in", res = 300)
 forest(ma)
 grid.text( "Meta-analysis of cardiac schwannomas in male rats", x = 0.5, y = 0.9, gp = gpar(cex = 1.5))
 grid.text( "(NTP numbers are poly3-adjusted, fractional per study treatment arm continuity correction)", x = 0.5, y = 0.1, gp = gpar(cex = 1))
 dev.off()
 
 
-pdf(paste0(saveto, "/males_schwannoma_alldoses_frTACC.pdf"), 11,4)
+pdf(paste0(saveto, "/males_schwannoma_alldoses_frTACC_RR.pdf"), 11,4)
 forest(ma)
 grid.text( "Meta-analysis of cardiac schwannomas in male rats", x = 0.5, y = 0.9, gp = gpar(cex = 1.5))
 grid.text( "(NTP numbers are poly3-adjusted, fractional per study treatment arm continuity correction)", x = 0.5, y = 0.1, gp = gpar(cex = 1))
 dev.off()
 
 
-##### Step 3: extract ORs with SE from the meta-analysis, to pass it on to dose-response meta-analysis #####
+##### Step 3: extract RRs with SE from the meta-analysis, to pass it on to dose-response meta-analysis #####
 
-# extract Odds Ratios from meta-analysis
+# extract Risk Ratios from meta-analysis
 forest = forest(ma)
 forest$effect.format
-ORs = as.numeric(forest$effect.format[4:length(forest$effect.format)])
-ORs
+RRs = as.numeric(forest$effect.format[4:length(forest$effect.format)])
+RRs
 
 # extract confidence intervals
 CI = forest$ci.format[4:length(forest$effect.format)]
@@ -136,35 +136,35 @@ CI_lower <- sapply(split_CI, function(x) as.numeric(x[1]))
 CI_upper <- sapply(split_CI, function(x) as.numeric(x[2]))
 
 
-# Calculate log odds ratios
-logOR <- log(ORs) # this is a natural logarithm
+# Calculate log risk ratios
+logRR <- log(RRs) # this is a natural logarithm
 
-# Calculate the standard error of the log odds ratios
+# Calculate the standard error of the log risk ratios
 z_value <- 1.96  # For a 95% CI
 logSE <- (log(CI_upper) - log(CI_lower)) / (2 * z_value)
 
 # Display results
-print("Odds ratios:")
-print(ORs)
+print("Risk ratios:")
+print(RRs)
 
-print("Standard Error of Log odds ratios:")
+print("Standard Error of Log risk ratios:")
 print(logSE)
 
 
-##### calculate ORs and SEs manually #####
-logORs <-  with(dat, log((exposed_N_cases * (sham_N_all - sham_N_cases) ) / ((exposed_N_all - exposed_N_cases)*sham_N_cases)) )
+##### calculate RRs and SEs manually #####
+logRRs <-  with(dat, log( (exposed_N_cases /exposed_N_all) / (sham_N_cases / sham_N_all)) )
+                                                                                                    
+logRRs
+exp(logRRs)
 
-logORs
-exp(logORs)
-
-logSEs <- with(dat, sqrt( 1/exposed_N_cases + 1 /(exposed_N_all - exposed_N_cases) + 1/sham_N_cases + 1/(sham_N_all - sham_N_cases)))
+logSEs <- with(dat, sqrt( 1/exposed_N_cases - 1 /exposed_N_all + 1/sham_N_cases - 1/sham_N_all))
 
 # get CI
-CI_lower <-  round(exp(c(logORs - qnorm ( 1- 0.05/2) * logSEs)) , 4)
-CI_upper <-  round(exp(c(logORs + qnorm ( 1- 0.05/2) * logSEs)) , 4)
+CI_lower <-  round(exp(c(logRRs - qnorm ( 1- 0.05/2) * logSEs)) , 4)
+CI_upper <-  round(exp(c(logRRs + qnorm ( 1- 0.05/2) * logSEs)) , 4)
 
 # check if own calculation matches the metabin computation to two decimals
-round(exp(logORs), 2) == round(exp(logOR), 2)
+round(exp(logRRs), 2) == round(exp(logRR), 2)
 
 
 ##### Step 4: we generate a data frame with all data and the format necessary for dosresmeta ##### 
@@ -185,7 +185,7 @@ data_frame <- data.frame(
   dose = doses,
   cases = events_exposed,
   n = total_exposed,
-  logrr = logORs,
+  logrr = logRRs,
   se = logSEs,
   ci_lower = CI_lower,
   ci_upper = CI_upper,
@@ -254,12 +254,12 @@ lin_bin <- dosresmeta(formula=logrr ~ dose, type=type, id=id,
                       se=se, 
                       cases=cases, n=n, covariance = "gl", data=data_bin, method="fixed", proc="1stage"
                       ) 
-output_file <- "/males_schwannoma_frTACC_lin_ModelSummary.txt"
+output_file <- "/males_schwannoma_frTACC_lin_ModelSummary_RR.txt"
 
 # Open the sink connection
 sink(paste0(saveto, output_file))
 summary(lin_bin)
-print("OR increase for every unit of ln(SAR):")
+print("RR increase for every unit of ln(SAR):")
 predict(lin_bin, delta=1, exp=TRUE)
 sink()
 
@@ -276,9 +276,9 @@ xticks_SAR <- c(6, 3, 1, 0.1, 0.03, 0,01, 0.001, 10^-6)
 xticks_lnSAR <- log(xticks_SAR)
 
 # pdf-plot
-pdf(paste0(saveto, "/males_schwannoma_frTACC_lin.pdf"), 7,4)
+pdf(paste0(saveto, "/males_schwannoma_frTACC_lin_RR.pdf"), 7,4)
 
-with(predict(lin_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(dose, pred, type="l", log='y', col="blue", ylim=c(0.8, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma odds ratio", xlab="SAR, W/kg", axes=FALSE)
+with(predict(lin_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(dose, pred, type="l", log='y', col="blue", ylim=c(0.8, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma risk ratio", xlab="SAR, W/kg", axes=FALSE)
   
   lines(dose, ci.lb, lty=2)
   lines(dose, ci.ub, lty=2)})
@@ -294,9 +294,9 @@ grid.text( paste0("p-value = ", round(obj$Wald.test[3], 4), "\nAIC = ", round(ob
 dev.off()
 
 #png-plot
-png(paste0(saveto, "/males_schwannoma_frTACC_lin.png"), 7,4, unit = "in", res= 300)
+png(paste0(saveto, "/males_schwannoma_frTACC_lin_RR.png"), 7,4, unit = "in", res= 300)
 
-with(predict(lin_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(dose, pred, type="l", log='y', col="blue", ylim=c(0.8, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma odds ratio", xlab="SAR, W/kg", axes=FALSE)
+with(predict(lin_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(dose, pred, type="l", log='y', col="blue", ylim=c(0.8, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma risk ratio", xlab="SAR, W/kg", axes=FALSE)
   
   lines(dose, ci.lb, lty=2)
   lines(dose, ci.ub, lty=2)})
@@ -314,8 +314,8 @@ dev.off()
 
 #### in a non-logarithmic display:
 
-pdf(paste0(saveto, "/males_schwannoma_frTACC_lin_dblnatural.pdf"), 7,4)
-with(predict(lin_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(exp(dose), pred, type="l", col="blue", ylim=c(0, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma odds ratio", xlab="SAR, W/kg")
+pdf(paste0(saveto, "/males_schwannoma_frTACC_lin_dblnatural_RR.pdf"), 7,4)
+with(predict(lin_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(exp(dose), pred, type="l", col="blue", ylim=c(0, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma risk ratio", xlab="SAR, W/kg")
   
   lines(exp(dose), ci.lb, lty=2)
   
@@ -326,8 +326,8 @@ grid.text( paste0("p-value = ", round(obj$Wald.test[3], 4), "\nAIC = ", round(ob
 dev.off()
 
 
-png(paste0(saveto, "/males_schwannoma_frTACC_lin_dblnatural.png"), 7,4, unit = "in", res= 300)
-with(predict(lin_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(exp(dose), pred, type="l", col="blue", ylim=c(0, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma odds ratio", xlab="SAR, W/kg")
+png(paste0(saveto, "/males_schwannoma_frTACC_lin_dblnatural_RR.png"), 7,4, unit = "in", res= 300)
+with(predict(lin_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(exp(dose), pred, type="l", col="blue", ylim=c(0, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma risk ratio", xlab="SAR, W/kg")
   
   lines(exp(dose), ci.lb, lty=2)
   
@@ -351,12 +351,12 @@ lin_bin <- dosresmeta(formula=logrr ~ dose, type=type, id=id,
                       cases=cases, n=n, covariance = "gl", data=data_bin, method="fixed", proc="1stage"
 ) 
 
-output_file <- "/males_schwannoma_frTACC_lin_0LoD_ModelSummary.txt"
+output_file <- "/males_schwannoma_frTACC_lin_0LoD_ModelSummary_RR.txt"
 
 # Open the sink connection
 sink(paste0(saveto, output_file))
 summary(lin_bin)
-print("OR increase for every unit of ln(SAR):")
+print("RR increase for every unit of ln(SAR):")
 predict(lin_bin, delta=1, exp=TRUE)
 sink()
 
@@ -371,9 +371,9 @@ xticks_SAR <- c(6, 3, 1, 0.1, 0.03, 0,01, 0.001, 10^-6, 10^-9)
 xticks_lnSAR <- log(xticks_SAR)
 
 #pdf-plot
-pdf(paste0(saveto, "/males_schwannoma_frTACC_lin_0LoD.pdf"), 7,4)
+pdf(paste0(saveto, "/males_schwannoma_frTACC_lin_0LoD_RR.pdf"), 7,4)
 
-with(predict(lin_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(dose, pred, type="l", log='y', col="blue", ylim=c(0.8, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma odds ratio\nlog-scale axis", xlab="SAR, W/kg", axes=FALSE)
+with(predict(lin_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(dose, pred, type="l", log='y', col="blue", ylim=c(0.8, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma risk ratio\nlog-scale axis", xlab="SAR, W/kg", axes=FALSE)
   
   lines(dose, ci.lb, lty=2)
   lines(dose, ci.ub, lty=2)})
@@ -391,9 +391,9 @@ dev.off()
 
 
 #png-plot
-png(paste0(saveto, "/males_schwannoma_frTACC_lin_0LoD.png"), 7,4, unit = "in", res= 300)
+png(paste0(saveto, "/males_schwannoma_frTACC_lin_0LoD_RR.png"), 7,4, unit = "in", res= 300)
 
-with(predict(lin_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(dose, pred, type="l", log='y', col="blue", ylim=c(0.8, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma odds ratio", xlab="SAR, W/kg", axes=FALSE)
+with(predict(lin_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(dose, pred, type="l", log='y', col="blue", ylim=c(0.8, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma risk ratio", xlab="SAR, W/kg", axes=FALSE)
   
   lines(dose, ci.lb, lty=2)
   lines(dose, ci.ub, lty=2)})
@@ -422,12 +422,12 @@ lin_bin <- dosresmeta(formula=logrr ~ dose, type=type, id=id,
                       cases=cases, n=n, covariance = "gl", data=data_bin, method="fixed", proc="1stage"
 ) 
 
-output_file <- "/males_schwannoma_frTACC_lin_log0.001_ModelSummary.txt"
+output_file <- "/males_schwannoma_frTACC_lin_log0.001_ModelSummary_RR.txt"
 
 # Open the sink connection
 sink(paste0(saveto, output_file))
 summary(lin_bin)
-print("OR increase for every unit of ln(SAR):")
+print("RR increase for every unit of ln(SAR):")
 predict(lin_bin, delta=1, exp=TRUE)
 sink()
 
@@ -443,9 +443,9 @@ xticks_SAR <- c(6, 3, 1, 0.1, 0.03, 0,01, 0.001, 10^-6)
 xticks_lnSAR <- log(xticks_SAR)
 
 
-pdf(paste0(saveto, "/males_schwannoma_frTACC_lin_log0.001.pdf"), 7,4)
+pdf(paste0(saveto, "/males_schwannoma_frTACC_lin_log0.001_RR.pdf"), 7,4)
 
-with(predict(lin_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(dose, pred, type="l", log='y', col="blue", ylim=c(0.8, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma odds ratio", xlab="SAR, W/kg", axes=FALSE)
+with(predict(lin_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(dose, pred, type="l", log='y', col="blue", ylim=c(0.8, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma risk ratio", xlab="SAR, W/kg", axes=FALSE)
   
   lines(dose, ci.lb, lty=2)
   lines(dose, ci.ub, lty=2)})
@@ -462,9 +462,9 @@ grid.text( paste0("p-value = ", round(obj$Wald.test[3], 4), "\nAIC = ", round(ob
 dev.off()
 
 
-png(paste0(saveto, "/males_schwannoma_frTACC_lin_log0.001.png"), 7,4, unit = "in", res= 300)
+png(paste0(saveto, "/males_schwannoma_frTACC_lin_log0.001_RR.png"), 7,4, unit = "in", res= 300)
 
-with(predict(lin_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(dose, pred, type="l", log='y', col="blue", ylim=c(0.8, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma odds ratio", xlab="SAR, W/kg", axes=FALSE)
+with(predict(lin_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(dose, pred, type="l", log='y', col="blue", ylim=c(0.8, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma risk ratio", xlab="SAR, W/kg", axes=FALSE)
   
   lines(dose, ci.lb, lty=2)
   lines(dose, ci.ub, lty=2)})
@@ -528,10 +528,10 @@ for (label in names(excluded_rows)) {
                                      round(max(data_bin$dose[-idx]), 2), 0.1))
   
   # Save model summary
-  output_file <- paste0("/males_schwannoma_frTACC_lin_LOO-", label, "_ModelSummary.txt")
+  output_file <- paste0("/males_schwannoma_frTACC_lin_LOO-", label, "_ModelSummary_RR.txt")
   sink(paste0(saveto, output_file))
   print(obj)
-  cat("\nOR increase for every unit of ln(SAR):\n")
+  cat("\nRR increase for every unit of ln(SAR):\n")
   print(predict(lin_bin, delta = 1, exp = TRUE))
   sink()
   
@@ -542,10 +542,10 @@ for (label in names(excluded_rows)) {
                       "\nAIC = ", round(obj$AIC, 4))
   
   # PDF plot
-  pdf(paste0(saveto, "/males_schwannoma_frTACC_lin_LOO-", label, ".pdf"), 9, 4)
+  pdf(paste0(saveto, "/males_schwannoma_frTACC_lin_LOO-", label, "_RR.pdf"), 9, 4)
   with(predict(lin_bin, dosex_bin, order = TRUE, exp = TRUE), {
     plot(dose, pred, type = "l", log='y', col = "blue", ylim = c(0.8, y_max), 
-         ylab = "schwannoma odds ratio", xlab = "SAR, W/kg", axes=FALSE)
+         ylab = "schwannoma risk ratio", xlab = "SAR, W/kg", axes=FALSE)
     lines(dose, ci.lb, lty = 2)
     lines(dose, ci.ub, lty = 2)
   })
@@ -558,10 +558,10 @@ for (label in names(excluded_rows)) {
   dev.off()
   
   # PNG plot
-  png(paste0(saveto, "/males_schwannoma_frTACC_lin_LOO-", label, ".png"), 9, 4, units = "in", res = 300)
+  png(paste0(saveto, "/males_schwannoma_frTACC_lin_LOO-", label, "_RR.png"), 9, 4, units = "in", res = 300)
   with(predict(lin_bin, dosex_bin, order = TRUE, exp = TRUE), {
     plot(dose, pred, type = "l", log='y', col = "blue", ylim = c(0.8, y_max), 
-         ylab = "schwannoma odds ratio", xlab = "SAR, W/kg", axes=FALSE)
+         ylab = "schwannoma risk ratio", xlab = "SAR, W/kg", axes=FALSE)
     lines(dose, ci.lb, lty = 2)
     lines(dose, ci.ub, lty = 2)
   })
@@ -586,7 +586,7 @@ quad_bin <- dosresmeta(formula=logrr ~ dose + I(dose^2), id=id, type=type,
                       se=se, 
                       cases=cases, n=n, covariance = "gl", method = "fixed", proc="1stage",data=data_bin)
 
-output_file <- "/males_schwannoma_frTACC_quad_ModelSummary.txt"
+output_file <- "/males_schwannoma_frTACC_quad_ModelSummary_RR.txt"
 
 # Open the sink connection
 sink(paste0(saveto, output_file))
@@ -596,9 +596,9 @@ sink()
 obj <- summary(quad_bin)
 
 # plot pdf
-pdf(paste0(saveto, "/males_schwannoma_frTACC_quad.pdf"), 7,4)
+pdf(paste0(saveto, "/males_schwannoma_frTACC_quad_RR.pdf"), 7,4)
 
-with(predict(quad_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(dose, pred,  type="l", log="y", col="blue", ylim=c(0.1, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma odds ratio", xlab="SAR, W/kg" ,axes=FALSE)
+with(predict(quad_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(dose, pred,  type="l", log="y", col="blue", ylim=c(0.1, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma risk ratio", xlab="SAR, W/kg" ,axes=FALSE)
   
   lines(dose, ci.lb, lty=2)
   
@@ -615,9 +615,9 @@ grid.text( paste0("p-value = ", round(obj$Wald.test[3], 4), "\n AIC = ", round(o
 dev.off()
 
 
-png(paste0(saveto, "/males_schwannoma_frTACC_quad.png"), 7,4, unit= "in", res = 300)
+png(paste0(saveto, "/males_schwannoma_frTACC_quad_RR.png"), 7,4, unit= "in", res = 300)
 
-with(predict(quad_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(dose, pred,  type="l", log="y", col="blue", ylim=c(0.1, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma odds ratio", xlab="SAR, W/kg" ,axes=FALSE)
+with(predict(quad_bin, dosex_bin, order=TRUE, exp=TRUE), {plot(dose, pred,  type="l", log="y", col="blue", ylim=c(0.1, (max(exp(data_bin$logrr))+0.1*(max(exp(data_bin$logrr))))), ylab="schwannoma risk ratio", xlab="SAR, W/kg" ,axes=FALSE)
   
   lines(dose, ci.lb, lty=2)
   
@@ -634,5 +634,5 @@ grid.text( paste0("p-value = ", round(obj$Wald.test[3], 4), "\n AIC = ", round(o
 dev.off()
 
 
-writeLines(capture.output(sessionInfo()), "session_info.txt")
+writeLines(capture.output(sessionInfo()), "session_info_RR.txt")
 

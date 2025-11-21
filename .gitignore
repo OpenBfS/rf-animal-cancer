@@ -1,0 +1,51 @@
+# R history and data
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+
+# RStudio files
+.Rproj.user/
+*.Rproj
+
+# Session info / logs / outputs
+.Rout
+.Rout.save
+.Rout.fail
+*.Rout.txt
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# R markdown and knitr cache
+*.utf8.md
+*.knit.md
+*.nb.html
+cache/
+*_cache/
+*.RDataTmp
+Rplot.pdf
+
+# Excel temporary files
+~$*.xlsx
+~$*.xls
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+# macOS metadata
+.Spotlight-V100
+.Trashes
+
+# Other OS or editor junk
+Icon?
+ehthumbs.db
+Thumbs.db
