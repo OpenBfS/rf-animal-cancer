@@ -69,6 +69,7 @@ cp organize_files.sh dosresmeta
 cd meta
 bash organize_files.sh
 ```
+Ignore the error "No such file or directory".
 
 Do the same for the dosresmeta directory:
 
